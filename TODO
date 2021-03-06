@@ -1,0 +1,11 @@
+[ ] TLS CLI arguments for key and path
+[ ] documentation in README.md for working with the port, URL base, TLS options
+  [ ] working with systemctl/initctl
+  [ ] email advice (SPF, FCrdns, DKIM)
+  most of this can be copied from https://docs.joinmastodon.org/admin/
+[ ] figure out packaging for various distros
+[ ] connect to a socket for recieving commands from the shell
+[ ] admin console for moderation
+  [ ] requires the ability to set up an admin account
+  [ ] which also needs the ability to send messages to the server
+[ ] timing events to create ticks, for garbage collection and passive objects

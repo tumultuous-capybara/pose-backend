@@ -1,0 +1,8 @@
+timing tokio task with an adjustable interval, defaulted to 1000ms
+  checks signal streams every tick
+  cleans up the expired access tokens in the db every so often
+
+what should be mirrored in memory, and what's left to the database?
+  having it all in-memory seems like the obvious solution, given how many random reads softcode will do to objects all over the system
+
+how much caching for softcode execution, and how is that implemented?

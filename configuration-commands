@@ -1,0 +1,2 @@
+* options requiring restarts
+single-world-mode [false]            the specified world is the only one people can log into, the frontend skips the world selection step

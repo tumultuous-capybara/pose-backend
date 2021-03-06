@@ -1,0 +1,35 @@
+Major Components
+  Parsing + Evaluation
+    type inference, maybe? has performance implications
+    dual parsing method, one fast error-less version, and a slower one if it fails
+    annoying floating-point rounding
+    libraries for attaching code for reusability
+      libraries have their own namespace
+    notebooks for code evaluation
+  Primitive Structures and Functions
+    efficient and flexible maps and arrays would be good
+    the object interface system
+      custom css framework
+  Version Control
+    commit-style for different code 'branches', which can be merged live all at once
+    saving versions of code that error out
+    snapshotting the world to recover from errors
+  UI/UX
+    hyperlinks to different attributes in the code
+      and for different sections of outputted ui?
+    autosuggestions for syntax error fixes, rich error information for syntactic errors
+    integrated comment/documentation system
+  Core/Engine
+    low-latency websocket error correction, e.g. syncronizing to the newest message
+    db connection pool
+    client-side execution for UI programs?
+      the update should be fast, but it's still a full round trip for each action
+      optimistic updates don't work as well, as it's code-controlled
+    custom API type solutions might be the best, developing to specific needs
+    detailed access control/ownership system permissions
+      code-based permissions
+    different invite/open registration policies
+
+UI details and components
+  filtered chat outputs?
+  discord-style floating text input window
