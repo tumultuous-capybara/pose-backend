@@ -35,14 +35,14 @@ fn space(i: &str) -> IResult<&str, &str> {
   take_while(move |c| chars.contains(c))(i)
 }
 
-fn parse_symbol (i: &str) -> IResult<&str, (char, Option<&str>)> {
+fn parse_symbol(i: &str) -> IResult<&str, (char, Option<&str>)> {
     pair(
         none_of("\"'(), 0123456789"),
         opt(is_not("\"'(), "))
     )(i)
 }
 
-fn symbol (i: &str) -> IResult<&str, String> {
+fn symbol(i: &str) -> IResult<&str, String> {
     map(parse_symbol, |(x, xs)| {
         let mut s = String::new();
         s.push(x);

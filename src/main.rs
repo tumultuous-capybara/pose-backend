@@ -12,44 +12,22 @@ extern crate clap;
 
 mod parse;
 mod cli;
+mod server;
 
-use parse::{Value, parse_value};
 use anyhow::{anyhow, Context, Result};
 
 use clap::{Arg, App, SubCommand, ArgMatches};
 
-use std::os::unix::net::{UnixStream, UnixListener};
-use std::thread;
-use std::collections::HashMap;
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc, RwLock
-};
-use std::str;
-use std::time::Duration;
-use std::io::{self, BufReader, BufRead, Read, Write};
-use std::fs;
-
-use rand::{thread_rng, Rng};
+use std::{str, fs, sync::{Arc, RwLock}};
+use std::os::unix::net::UnixStream;
 
 use tokio::signal::unix::{signal, SignalKind};
 use tokio::sync::broadcast;
 use tokio::sync::broadcast::{Sender, Receiver};
 
 use futures::{FutureExt, StreamExt};
-use warp::ws::{Message, WebSocket};
-use warp::{Filter, http::Response};
 
-use sqlx::sqlite::SqlitePool;
-use sqlx::Executor;
-use sqlx::pool::PoolOptions;
-use sqlx::sqlite::SqlitePoolOptions;
-
-static index: &'static str = include_str!("../mock-frontend/index.html");
-static js: &'static str = include_str!("../mock-frontend/main.js");
-static css: &'static str = include_str!("../mock-frontend/main.css");
-
-type AcessTokens = Arc<RwLock<Vec<[u8; 64]>>>;
+use sqlx::{sqlite::SqlitePool, Executor, pool::PoolOptions, sqlite::SqlitePoolOptions};
 
 #[tokio::main]
 async fn main() {
@@ -65,7 +43,6 @@ async fn main() {
                 (about: "Determines if the server is online and active."))
             (@subcommand stop =>
                 (about: "Shuts down the server."))
-                (@arg input: +required "String to echo."))
             (@subcommand parse =>
                 (about: "Parses some code.")
                 (@arg input: +required "String to parse."))
@@ -87,13 +64,11 @@ async fn main() {
 
     // the server is already started at this socket!
     if UnixStream::connect(&socket_path).is_ok() {
-        println!("[Error] Server is already active!");
-        std::process::exit(1);
+        panic!("[Error] Server is already active!");
     }
 
     // initalize various structs
-    let (shutdown_writer, mut shutdown_reader): (Sender<()>, Receiver<()>) = broadcast::channel(1);
-    let tokens = AcessTokens::default();
+    let (shutdown_writer, shutdown_reader): (Sender<()>, Receiver<()>) = broadcast::channel(1);
 
     // listener for shutdown on unix signals (SIGTERM, SIGHUP, SIGINT)
     let shutdown_writer_unix = shutdown_writer.clone();
@@ -106,7 +81,7 @@ async fn main() {
             _ = terminate.recv() => { }
         }
         shutdown_writer_unix.send(()).ok();
-        println!("Shutting down...");
+        info!("Shutting down...");
     };
 
     // database setup
@@ -139,7 +114,7 @@ async fn main() {
     if fs::metadata(socket_path).is_ok() {
         match fs::remove_file(socket_path) {
             Ok(v)    => info!("old socket file cleared"),
-            Err(err) => error!("can't remove file: {}", err)
+            Err(err) => panic!("can't remove file: {}", err)
         }
     }
 
@@ -147,36 +122,14 @@ async fn main() {
     tokio::task::spawn(shutdown_watcher);
     tokio::task::spawn(cli::start_listener(shutdown_writer.clone(), socket_path.to_string(), database.clone()));
 
-    // ** Warp Routes **
-    // <static files>                -- The frontend resources, html, css, js, and woff2
-    //
-    // api/auth/authenticate {token} -- Attempts to use a token to auth the connection
-    // api/auth/login {user, pass}   -- Makes a login attempt, returns a new token if successful
-    // api/auth/register {id}        -- Accepts an invite
-    // api/invite {email}            -- Sends an invite request to the specified email
-    // invite/<id>                   -- External link for requested invite, handled client-side
+    // start the main server
+    server::start_server(database, port, shutdown_reader).await;
 
-    let index_route = warp::path::end().map(|| {
-        warp::reply::html(index)
-    });
-    let js_route = warp::path!("main.js").map(|| {
-        Response::builder()
-            .header("content-type", "text/javascript; charset=utf-8")
-            .body(js)
-    });
-    let css_route = warp::path!("main.css").map(|| {
-        Response::builder()
-            .header("content-type", "text/css; charset=utf-8")
-            .body(css)
-    });
-
-
-    let routes = index_route.or(js_route).or(css_route);
-
-    let (addr, server) = warp::serve(routes)
-        .bind_with_graceful_shutdown(([127, 0, 0, 1], port), async move {
-            shutdown_reader.recv().await.ok();
-        });
-
-    server.await;
+    // cleanup after server stop
+    if fs::metadata(socket_path).is_ok() {
+        match fs::remove_file(socket_path) {
+            Ok(v)    => info!("cleaned up socket file"),
+            Err(err) => error!("can't remove file: {}", err)
+        }
+    }
 }

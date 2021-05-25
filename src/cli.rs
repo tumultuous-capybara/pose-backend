@@ -33,14 +33,12 @@ enum CliCommand {
     GetStatus,
     Stop,
     DatabaseTest,
-    Echo(String),
 }
 
 #[derive(Serialize, Deserialize)]
 enum CliResponse {
     Status,
     DatabaseTestResponse(u128),
-    Echo(String),
     StoppingServer,
 }
 
